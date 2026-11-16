@@ -4,13 +4,14 @@
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./worker/index");
-		durableNamespaces: "ChatAgent";
+		durableNamespaces: "ChatAgent" | "ResearchAgent";
 	}
 	interface Env {
 		AI: Ai;
 		IMAGES: ImagesBinding;
 		ASSETS: Fetcher;
 		ChatAgent: DurableObjectNamespace<import("./worker/index").ChatAgent>;
+		ResearchAgent: DurableObjectNamespace<import("./worker/index").ResearchAgent>;
 	}
 }
 interface Env extends Cloudflare.Env {}

@@ -9,11 +9,13 @@ import handler from "vinext/server/app-router-entry";
 import { routeAgentRequest } from "agents";
 
 export { ChatAgent } from "./chat-agent";
+export { ResearchAgent } from "./research-agent";
 
 interface Env {
   ASSETS: Fetcher;
   AI: unknown;
   ChatAgent: DurableObjectNamespace;
+  ResearchAgent: DurableObjectNamespace;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
