@@ -66,7 +66,9 @@ export default {
 
 The `ChatAgent` Durable Object (in `worker/chat-agent.ts`) extends `AIChatAgent` from `@cloudflare/ai-chat`. It streams responses from Workers AI, supports tool calls (weather, calculations, scheduling), and maintains persistent chat history via Durable Object SQLite storage.
 
-The frontend (`app/chat/Chat.tsx`) connects over WebSocket using `useAgent` and `useAgentChat` hooks.
+A second agent, `ResearchAgent` (in `worker/research-agent.ts`), also extends `AIChatAgent` but has a research-assistant persona. Its tools fetch and read web pages (`fetchPage`) and manage a persistent notebook stored in the agent's own SQLite database via `this.sql` (`saveNote`, `listNotes`, `deleteNote`). Each agent class has its own Durable Object binding and migration in `wrangler.jsonc`.
+
+The frontend (`app/chat/Chat.tsx`) connects over WebSocket using `useAgent` and `useAgentChat` hooks. The tabs in the header switch between the two agents.
 
 ## Getting started
 
@@ -96,6 +98,7 @@ app/
 worker/
   index.ts          — Cloudflare Worker entry point
   chat-agent.ts     — ChatAgent Durable Object
+  research-agent.ts — ResearchAgent Durable Object
 vite.config.ts      — vinext + cloudflare plugin config
 wrangler.jsonc      — Cloudflare Worker bindings and DO migrations
 ```

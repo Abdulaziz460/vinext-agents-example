@@ -9,6 +9,7 @@ import {
   InputArea,
   Empty,
   Surface,
+  Tabs,
   Text,
 } from "@cloudflare/kumo";
 import { Toasty, useKumoToastManager } from "@cloudflare/kumo/components/toast";
@@ -209,6 +210,37 @@ function ToolPartView({
   return null;
 }
 
+// ── Agents ────────────────────────────────────────────────────────────
+
+const AGENTS = {
+  ChatAgent: {
+    label: "Chat",
+    prompts: [
+      "What's the weather in Paris?",
+      "What timezone am I in?",
+      "Calculate 5000 * 3",
+      "Remind me in 5 minutes to take a break",
+    ],
+  },
+  ResearchAgent: {
+    label: "Research",
+    prompts: [
+      "Summarize https://developers.cloudflare.com/agents/",
+      "Save a note: Durable Objects give each agent its own SQLite database",
+      "What notes have I saved?",
+    ],
+  },
+} as const;
+
+type AgentName = keyof typeof AGENTS;
+
+const AGENT_STORAGE_KEY = "selected-agent";
+
+function getInitialAgent(): AgentName {
+  const stored = localStorage.getItem(AGENT_STORAGE_KEY);
+  return stored && stored in AGENTS ? (stored as AgentName) : "ChatAgent";
+}
+
 // ── Main chat ─────────────────────────────────────────────────────────
 
 function getOrCreateRoomId(): string {
@@ -221,7 +253,13 @@ function getOrCreateRoomId(): string {
   return id;
 }
 
-function ChatInner() {
+function ChatInner({
+  agentName,
+  onAgentChange,
+}: {
+  agentName: AgentName;
+  onAgentChange: (agent: AgentName) => void;
+}) {
   const [connected, setConnected] = useState(false);
   const [input, setInput] = useState("");
   const [showDebug, setShowDebug] = useState(false);
@@ -232,7 +270,7 @@ function ChatInner() {
   const [roomId] = useState(getOrCreateRoomId);
 
   const agent = useAgent({
-    agent: "ChatAgent",
+    agent: agentName,
     name: roomId,
     onOpen: useCallback(() => setConnected(true), []),
     onClose: useCallback(() => setConnected(false), []),
@@ -326,10 +364,14 @@ function ChatInner() {
             <h1 className="text-lg font-semibold text-kumo-default">
               <span className="mr-2">⛅</span>Agent Chat
             </h1>
-            <Badge variant="secondary">
-              <ChatCircleDotsIcon size={12} weight="bold" className="mr-1" />
-              AI Chat
-            </Badge>
+            <Tabs
+              tabs={(Object.keys(AGENTS) as AgentName[]).map((name) => ({
+                value: name,
+                label: AGENTS[name].label,
+              }))}
+              value={agentName}
+              onValueChange={(value) => onAgentChange(value as AgentName)}
+            />
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -372,12 +414,7 @@ function ChatInner() {
               title="Start a conversation"
               contents={
                 <div className="flex flex-wrap justify-center gap-2">
-                  {[
-                    "What's the weather in Paris?",
-                    "What timezone am I in?",
-                    "Calculate 5000 * 3",
-                    "Remind me in 5 minutes to take a break",
-                  ].map((prompt) => (
+                  {AGENTS[agentName].prompts.map((prompt) => (
                     <Button
                       key={prompt}
                       variant="outline"
@@ -562,6 +599,13 @@ function ChatInner() {
 }
 
 export default function Chat() {
+  const [agentName, setAgentName] = useState<AgentName>(getInitialAgent);
+
+  const handleAgentChange = useCallback((next: AgentName) => {
+    localStorage.setItem(AGENT_STORAGE_KEY, next);
+    setAgentName(next);
+  }, []);
+
   return (
     <Toasty>
       <Suspense
@@ -571,7 +615,11 @@ export default function Chat() {
           </div>
         }
       >
-        <ChatInner />
+        <ChatInner
+          key={agentName}
+          agentName={agentName}
+          onAgentChange={handleAgentChange}
+        />
       </Suspense>
     </Toasty>
   );
