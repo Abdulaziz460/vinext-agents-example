@@ -12,6 +12,7 @@ import {
 import { z } from "zod";
 
 const MAX_PAGE_CHARS = 8000;
+const MAX_DOWNLOAD_BYTES = 1_000_000;
 
 type Note = {
   id: number;
@@ -20,6 +21,29 @@ type Note = {
   source: string | null;
   created_at: string;
 };
+
+async function readBodyCapped(res: Response, maxBytes: number) {
+  if (!res.body) return { body: "", capped: false };
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let body = "";
+  let received = 0;
+  let capped = false;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const remaining = maxBytes - received;
+    if (value.byteLength >= remaining) {
+      body += decoder.decode(value.subarray(0, remaining));
+      capped = true;
+      await reader.cancel();
+      break;
+    }
+    received += value.byteLength;
+    body += decoder.decode(value, { stream: true });
+  }
+  return { body: body + decoder.decode(), capped };
+}
 
 function htmlToText(html: string) {
   return html
@@ -85,7 +109,10 @@ export class ResearchAgent extends AIChatAgent<Env> {
                 return { url, error: `HTTP ${res.status} ${res.statusText}` };
               }
               const contentType = res.headers.get("content-type") ?? "";
-              const body = await res.text();
+              const { body, capped } = await readBodyCapped(
+                res,
+                MAX_DOWNLOAD_BYTES
+              );
               const text = contentType.includes("html")
                 ? htmlToText(body)
                 : body.trim();
@@ -94,7 +121,7 @@ export class ResearchAgent extends AIChatAgent<Env> {
                 url,
                 title: title ? htmlToText(title) : undefined,
                 content: text.slice(0, MAX_PAGE_CHARS),
-                truncated: text.length > MAX_PAGE_CHARS,
+                truncated: capped || text.length > MAX_PAGE_CHARS,
               };
             } catch (error) {
               return { url, error: `Failed to fetch: ${error}` };
