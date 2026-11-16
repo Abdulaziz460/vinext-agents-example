@@ -48,6 +48,7 @@ async function readBodyCapped(res: Response, maxBytes: number) {
 function htmlToText(html: string) {
   return html
     .replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<(script|style|noscript|svg)\b[\s\S]*$/i, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
