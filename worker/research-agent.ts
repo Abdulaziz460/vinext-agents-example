@@ -177,6 +177,17 @@ export class ResearchAgent extends AIChatAgent<Env> {
         }),
       },
       onFinish,
+      // Fetched page content is untrusted: once fetchPage has run in this
+      // turn, disable notebook mutations so injected instructions can't
+      // write or delete notes. The user can ask to save in a follow-up turn.
+      prepareStep: ({ steps }) => {
+        const fetched = steps.some((step) =>
+          step.toolCalls.some((call) => call.toolName === "fetchPage")
+        );
+        return fetched
+          ? { activeTools: ["fetchPage", "listNotes"] }
+          : undefined;
+      },
       stopWhen: stepCountIs(5),
       abortSignal: options?.abortSignal,
     });
